@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  masterPrompts MasterPrompt[]
+  conversations Conversation[]
+  documents     Document[]
+  createdAt     DateTime       @default(now())
+}
+
+model MasterPrompt {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text
+  isPinned  Boolean  @default(false)
+  version   Int      @default(1)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  updatedAt DateTime @updatedAt
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  title     String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+  summaries Summary[]
+  createdAt DateTime  @default(now())
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  role           String
+  content        String       @db.Text
+  tokenEstimate  Int
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  createdAt      DateTime     @default(now())
+}
+
+model Summary {
+  id             String       @id @default(uuid())
+  summaryText    String       @db.Text
+  fromMessageId  String?
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  createdAt      DateTime     @default(now())
+}
+
+model Document {
+  id        String                 @id @default(uuid())
+  userId    String
+  user      User                   @relation(fields: [userId], references: [id])
+  filename  String
+  content   String                 @db.Text
+  
+  // Unsupported type ini artinya Prisma tidak akan validasi isinya, 
+  // kita akan kirim raw query SQL untuk vector.
+  embedding Unsupported("vector(768)")? 
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
